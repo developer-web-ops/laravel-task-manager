@@ -11,6 +11,13 @@ use Illuminate\Support\Facades\Route;
 */
 
 // Public auth routes
+
+Route::get('/health', function () {
+    return response()->json([
+        'status' => 'ok',
+    ]);
+});
+
 Route::prefix('auth')->group(function () {
     Route::post('register', [AuthController::class, 'register']);
     Route::post('login',    [AuthController::class, 'login']);

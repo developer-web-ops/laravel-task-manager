@@ -1,9 +1,10 @@
 FROM php:8.4-fpm-alpine
 
-# Install system dependencies
+# System dependencies
 RUN apk add --no-cache \
     nginx \
     supervisor \
+    bash \
     curl \
     libpng-dev \
     libzip-dev \
@@ -16,7 +17,7 @@ RUN apk add --no-cache \
     nodejs \
     npm
 
-# Install PHP extensions
+# PHP extensions
 RUN docker-php-ext-install \
     pdo \
     pdo_pgsql \
@@ -26,36 +27,49 @@ RUN docker-php-ext-install \
     pcntl \
     bcmath
 
-# Install sodium via PECL (needed for Passport / lcobucci/jwt)
-RUN apk add --no-cache libsodium-dev \
-    && docker-php-ext-install sodium
-
-# Install Composer
+# Composer
 COPY --from=composer:2.8 /usr/bin/composer /usr/bin/composer
 
 WORKDIR /var/www/html
 
-# Copy composer files first (layer cache)
+# Install PHP dependencies first for Docker layer caching
 COPY composer.json composer.lock ./
 
-# Install PHP dependencies (no dev, no scripts yet)
-RUN composer install --no-dev --no-scripts --no-autoloader --prefer-dist --ignore-platform-reqs
+RUN composer install \
+    --no-dev \
+    --no-scripts \
+    --no-autoloader \
+    --prefer-dist
 
-# Copy full application
+# Install frontend dependencies first for Docker layer caching
+COPY package.json package-lock.json ./
+
+RUN npm ci
+
+# Copy application
 COPY . .
 
-# Generate optimized autoloader
+# Build production frontend assets
+RUN npm run build
+
+# Generate optimized Composer autoloader
 RUN composer dump-autoload --optimize --no-dev
 
-# Set storage permissions
-RUN mkdir -p storage/logs storage/framework/cache storage/framework/sessions storage/framework/views bootstrap/cache \
-    && chmod -R 775 storage bootstrap/cache \
-    && chown -R www-data:www-data storage bootstrap/cache
+# Laravel writable directories
+RUN mkdir -p \
+    storage/logs \
+    storage/framework/cache \
+    storage/framework/sessions \
+    storage/framework/views \
+    bootstrap/cache \
+    && chown -R www-data:www-data storage bootstrap/cache \
+    && chmod -R 775 storage bootstrap/cache
 
-# Copy config files
+# Nginx / Supervisor / startup config
 COPY docker/nginx.conf /etc/nginx/nginx.conf
 COPY docker/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 COPY docker/start.sh /start.sh
+
 RUN chmod +x /start.sh
 
 EXPOSE 8080

@@ -595,12 +595,12 @@
 
                 <div class="mb-3">
                     <label class="form-label">Email address</label>
-                    <input type="email" id="login-email" class="form-control" placeholder="you@example.com" value="demo@taskmanager.com">
+                    <input type="email" id="login-email" class="form-control" placeholder="you@example.com" >
                 </div>
                 <div class="mb-4">
                     <label class="form-label">Password</label>
                     <div class="input-group">
-                        <input type="password" id="login-password" class="form-control" placeholder="Enter your password" value="password">
+                        <input type="password" id="login-password" class="form-control" placeholder="Enter your password" >
                         <button class="btn btn-outline-secondary" type="button" id="toggle-password">
                             <i class="bi bi-eye"></i>
                         </button>

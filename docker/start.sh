@@ -1,31 +1,47 @@
 #!/bin/sh
 set -e
 
-echo "==> Starting TaskFlow deployment bootstrap..."
+echo "==> Starting Laravel deployment bootstrap..."
 
-# Create supervisor log directory
+# Required production secrets
+: "${PASSPORT_PRIVATE_KEY:?PASSPORT_PRIVATE_KEY is required}"
+: "${PASSPORT_PUBLIC_KEY:?PASSPORT_PUBLIC_KEY is required}"
+
+# Create Supervisor log directory
 mkdir -p /var/log/supervisor
 
-# Run Laravel production bootstrap
-echo "==> Caching config, routes, views..."
+echo "==> Caching config and views..."
 php artisan config:cache
-php artisan route:cache
 php artisan view:cache
 
 echo "==> Running database migrations..."
 php artisan migrate --force
 
-echo "==> Installing Passport keys and client..."
-php artisan passport:keys --force 2>/dev/null || true
+echo "==> Ensuring Passport personal access client exists..."
 
-# Create personal access client only if none exists
-php artisan passport:client --personal --no-interaction 2>/dev/null || true
+if ! php artisan tinker --execute="
+    exit(
+        \DB::table('oauth_clients')
+            ->where('grant_types', 'like', '%personal_access%')
+            ->exists()
+        ? 0
+        : 1
+    );
+"; then
+    php artisan passport:client \
+        --personal \
+        --name="TaskManager" \
+        --no-interaction
+fi
 
-echo "==> Linking storage..."
+echo "==> Linking Laravel storage..."
 php artisan storage:link 2>/dev/null || true
 
 echo "==> Setting permissions..."
-chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
+chown -R www-data:www-data \
+    /var/www/html/storage \
+    /var/www/html/bootstrap/cache
 
-echo "==> Starting supervisord (nginx + php-fpm + scheduler)..."
-exec /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf
+echo "==> Starting Supervisor..."
+exec /usr/bin/supervisord \
+    -c /etc/supervisor/conf.d/supervisord.conf

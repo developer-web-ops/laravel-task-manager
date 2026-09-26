@@ -1,16 +1,15 @@
 services:
-  # ── Web Service ───────────────────────────────────────────────
   - type: web
     name: taskflow
     runtime: docker
-    dockerfilePath: ./Dockerfile
     plan: free
     region: singapore
     branch: main
-    healthCheckPath: /api/auth/login
-    scaling:
-      minInstances: 1
-      maxInstances: 1
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    autoDeployTrigger: commit
+
+    healthCheckPath: /api/health
 
     envVars:
       - key: APP_NAME
@@ -20,41 +19,78 @@ services:
         value: production
 
       - key: APP_KEY
-        generateValue: true
+        sync: false
 
       - key: APP_DEBUG
         value: "false"
 
+      # Render automatically supplies the actual public URL.
       - key: APP_URL
-        value: https://taskflow.onrender.com
+        fromService:
+          name: taskflow
+          type: web
+          envVarKey: RENDER_EXTERNAL_URL
 
       - key: APP_TIMEZONE
         value: Asia/Kolkata
 
-      # Database — auto-linked to the PostgreSQL service below
+      - key: APP_LOCALE
+        value: en
+
+      - key: APP_FALLBACK_LOCALE
+        value: en
+
+      - key: LOG_CHANNEL
+        value: stderr
+
+      - key: LOG_LEVEL
+        value: info
+
+      # Nginx listens on 8080 in our Docker image.
+      - key: PORT
+        value: "8080"
+
+      # Supabase PostgreSQL — use the Shared Pooler / Session connection.
       - key: DB_CONNECTION
         value: pgsql
 
-      - key: DATABASE_URL
-        fromDatabase:
-          name: taskflow-db
-          property: connectionString
+      - key: DB_URL
+        sync: false
 
-      - key: CACHE_DRIVER
-        value: database
+      - key: DB_SSLMODE
+        value: require
 
       - key: SESSION_DRIVER
+        value: database
+
+      - key: SESSION_LIFETIME
+        value: "120"
+
+      - key: SESSION_ENCRYPT
+        value: "false"
+
+      - key: CACHE_STORE
         value: database
 
       - key: QUEUE_CONNECTION
         value: sync
 
-      - key: LOG_CHANNEL
-        value: stderr
+      - key: FILESYSTEM_DISK
+        value: local
 
-      # Mailtrap — email reminders
+      # Laravel Passport
+      - key: PASSPORT_PRIVATE_KEY
+        sync: false
+
+      - key: PASSPORT_PUBLIC_KEY
+        sync: false
+
+      # Mailtrap
       - key: MAIL_MAILER
         value: smtp
+
+      - key: MAIL_SCHEME
+        value: tls
 
       - key: MAIL_HOST
         value: sandbox.smtp.mailtrap.io
@@ -63,24 +99,13 @@ services:
         value: "2525"
 
       - key: MAIL_USERNAME
-        value: 7bb65fc5384d73
+        sync: false
 
       - key: MAIL_PASSWORD
-        value: e47253e418f7cd
-
-      - key: MAIL_ENCRYPTION
-        value: tls
+        sync: false
 
       - key: MAIL_FROM_ADDRESS
         value: noreply@taskmanager.com
 
       - key: MAIL_FROM_NAME
         value: "Task Manager"
-
-  # ── PostgreSQL Database ───────────────────────────────────────
-databases:
-  - name: taskflow-db
-    databaseName: taskflow
-    user: taskflow
-    plan: free
-    region: singapore
