@@ -5,8 +5,10 @@ services:
     plan: free
     region: singapore
     branch: main
+
     dockerfilePath: ./Dockerfile
     dockerContext: .
+
     autoDeployTrigger: commit
 
     healthCheckPath: /api/health
@@ -24,7 +26,7 @@ services:
       - key: APP_DEBUG
         value: "false"
 
-      # Render automatically supplies the actual public URL.
+      # Render automatically provides the public URL.
       - key: APP_URL
         fromService:
           name: taskflow
@@ -46,11 +48,12 @@ services:
       - key: LOG_LEVEL
         value: info
 
-      # Nginx listens on 8080 in our Docker image.
+      # Nginx listens on 8080.
       - key: PORT
         value: "8080"
 
-      # Supabase PostgreSQL — use the Shared Pooler / Session connection.
+      # Supabase PostgreSQL
+      # Use Supabase Shared Pooler -> Session mode -> port 5432.
       - key: DB_CONNECTION
         value: pgsql
 
@@ -60,14 +63,18 @@ services:
       - key: DB_SSLMODE
         value: require
 
+      # Web sessions do not need PostgreSQL for this SPA/API architecture.
       - key: SESSION_DRIVER
-        value: database
+        value: cookie
 
       - key: SESSION_LIFETIME
         value: "120"
 
       - key: SESSION_ENCRYPT
         value: "false"
+
+      - key: SESSION_SECURE_COOKIE
+        value: "true"
 
       - key: CACHE_STORE
         value: database
