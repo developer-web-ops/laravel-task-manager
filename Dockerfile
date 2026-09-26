@@ -52,10 +52,8 @@ COPY . .
 # Build production frontend assets
 RUN npm run build
 
-# Generate optimized Composer autoloader
-RUN composer dump-autoload --optimize --no-dev
-
 # Laravel writable directories
+# bootstrap/cache must exist before Composer package discovery runs.
 RUN mkdir -p \
     storage/logs \
     storage/framework/cache \
@@ -64,6 +62,9 @@ RUN mkdir -p \
     bootstrap/cache \
     && chown -R www-data:www-data storage bootstrap/cache \
     && chmod -R 775 storage bootstrap/cache
+
+# Generate optimized Composer autoloader
+RUN composer dump-autoload --optimize --no-dev
 
 # Nginx / Supervisor / startup config
 COPY docker/nginx.conf /etc/nginx/nginx.conf
