@@ -7,8 +7,12 @@ echo "==> Starting Laravel deployment bootstrap..."
 : "${PASSPORT_PRIVATE_KEY:?PASSPORT_PRIVATE_KEY is required}"
 : "${PASSPORT_PUBLIC_KEY:?PASSPORT_PUBLIC_KEY is required}"
 
-# Create Supervisor log directory
+# Runtime directories required by Supervisor and Nginx
 mkdir -p /var/log/supervisor
+mkdir -p /tmp/nginx/fastcgi
+
+# Nginx workers run as www-data
+chown -R www-data:www-data /tmp/nginx
 
 echo "==> Caching config and views..."
 php artisan config:cache
